@@ -46,7 +46,7 @@ npm install -g expo-cli
 ### 2. Clone o Repositório
 
 ```bash
-git clone https://github.com/sua-holding/postocalmo.git
+git clone https://github.com/PedroHPrior/projeto_abex.git
 cd postocalmo
 ```
 
