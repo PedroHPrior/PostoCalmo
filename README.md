@@ -97,10 +97,4 @@ Fique à vontade para abrir issues ou enviar pull requests com sugestões de mel
 
 ---
 
-## 📄 Licença
-
-Este projeto está licenciado sob os termos da licença MIT. Consulte o arquivo `LICENSE` para mais detalhes.
-
----
-
 **Abex III** © 2025. Todos os direitos reservados.
