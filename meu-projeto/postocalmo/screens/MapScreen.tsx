@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, SafeAreaView, Modal, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, SafeAreaView, Modal, Switch, ActivityIndicator, Alert } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { theme } from '../constants/theme';
+import { API_URL } from '../constants/api';
 
 // Função auxiliar para determinar a cor baseada na lotação
 const getLotacaoColor = (lotacao: number) => {
@@ -19,102 +21,110 @@ const getLotacaoText = (lotacao: number) => {
   return 'Baixa';
 };
 
-// Dados de exemplo dos postos
-const postosExemplo = [
-  {
-    id: 1,
-    nome: 'Posto Exemplo 1',
-    lotacao: 100,
-    latitude: -23.55052,
-    longitude: -46.633308,
-    distancia: '2km',
-    tempoEspera: '20min'
-  },
-  {
-    id: 2,
-    nome: 'Posto Exemplo 2',
-    lotacao: 40,
-    latitude: -23.551,
-    longitude: -46.632,
-    distancia: '3km',
-    tempoEspera: '15min'
-  },
-  {
-    id: 3,
-    nome: 'Posto Exemplo 3',
-    lotacao: 0,
-    latitude: -23.552,
-    longitude: -46.631,
-    distancia: '5km',
-    tempoEspera: '0min'
-  }
-];
-
 export default function MapScreen() {
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [postos, setPostos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalFiltros, setModalFiltros] = useState(false);
   const [filtros, setFiltros] = useState({
     lotado: true,
     alta: true,
     media: true,
     baixa: true,
-    distancia: 5, // km
+    distancia: 10, // km
   });
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const [modalFiltros, setModalFiltros] = useState(false);
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permissão de localização negada.');
+        setLoading(false);
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc);
+    })();
+  }, []);
 
-  const postosFiltrados = postosExemplo.filter(posto => {
-    if (posto.lotacao > 95 && !filtros.lotado) return false;
-    if (posto.lotacao >= 65 && !filtros.alta) return false;
-    if (posto.lotacao >= 30 && !filtros.media) return false;
-    if (posto.lotacao < 30 && !filtros.baixa) return false;
+  useEffect(() => {
+    if (location) {
+      fetchPostos();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, filtros]);
+
+  const fetchPostos = async () => {
+    setLoading(true);
+    try {
+      const lat = location?.coords.latitude;
+      const lng = location?.coords.longitude;
+      const radius = filtros.distancia * 1000;
+      const res = await fetch(`${API_URL}/postos?lat=${lat}&lng=${lng}&radius=${radius}`);
+      const data = await res.json();
+      if (res.ok) {
+        setPostos(data.postos);
+      } else {
+        setErrorMsg(data.message || 'Erro ao buscar postos.');
+      }
+    } catch (err) {
+      setErrorMsg('Erro ao conectar ao servidor.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const postosFiltrados = postos.filter(posto => {
+    // Aqui você pode filtrar por lotação se quiser, por enquanto retorna todos
     return true;
   });
-
-  const notificacoesFiltradas = postosFiltrados.map(posto => ({
-    id: posto.id,
-    texto: `⚠️ ${posto.nome} com ${getLotacaoText(posto.lotacao)} Lotação`,
-    subtexto: `${posto.distancia} de distância${posto.tempoEspera !== '0min' ? ` • Tempo de espera: ${posto.tempoEspera}` : ' • Sem fila'}`,
-    lotacao: posto.lotacao
-  }));
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Postos Disponíveis</Text>
+        <Text style={styles.headerTitle}>Postos de Saúde Próximos</Text>
         <Text style={styles.headerSubtitle}>Encontre o posto mais próximo de você</Text>
       </View>
 
-      <MapView
-        provider={PROVIDER_GOOGLE}
-        style={styles.map}
-        initialRegion={{
-          latitude: -23.55052,
-          longitude: -46.633308,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-        customMapStyle={[
-          {
-            featureType: "all",
-            elementType: "labels.text.fill",
-            stylers: [{ color: theme.colors.primary }]
-          },
-          {
-            featureType: "all",
-            elementType: "labels.text.stroke",
-            stylers: [{ color: theme.colors.white }]
-          }
-        ]}
-      >
-        {postosFiltrados.map(posto => (
-          <Marker 
-            key={posto.id}
-            coordinate={{ latitude: posto.latitude, longitude: posto.longitude }} 
-            title={posto.nome}
-            description={`Lotação: ${posto.lotacao}%`}
-            pinColor={getLotacaoColor(posto.lotacao)}
-          />
-        ))}
-      </MapView>
+      {loading || !location ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={{ marginTop: 16, color: theme.colors.primary }}>Carregando mapa...</Text>
+          {errorMsg ? <Text style={{ color: 'red', marginTop: 8 }}>{errorMsg}</Text> : null}
+        </View>
+      ) : (
+        <MapView
+          provider={PROVIDER_GOOGLE}
+          style={styles.map}
+          initialRegion={{
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.09, // Aproxima para ~10km
+            longitudeDelta: 0.09,
+          }}
+          region={{
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.09,
+            longitudeDelta: 0.09,
+          }}
+          showsUserLocation
+        >
+          {postosFiltrados.map((posto, idx) => (
+            <Marker
+              key={posto._id || idx}
+              coordinate={{
+                latitude: posto.location.coordinates[1],
+                longitude: posto.location.coordinates[0],
+              }}
+              title={posto.name}
+              description={posto.address}
+              pinColor={theme.colors.primary}
+            />
+          ))}
+        </MapView>
+      )}
 
       <View style={styles.notificationsContainer}>
         <View style={styles.notificationsHeader}>
@@ -128,17 +138,17 @@ export default function MapScreen() {
         </View>
 
         <ScrollView style={styles.notifications}>
-          {notificacoesFiltradas.map(notificacao => (
+          {postosFiltrados.map((posto, idx) => (
             <TouchableOpacity 
-              key={notificacao.id}
-              style={[styles.notificationItem, { borderLeftColor: getLotacaoColor(notificacao.lotacao) }]}
+              key={posto._id || idx}
+              style={[styles.notificationItem, { borderLeftColor: theme.colors.primary }]}
             >
               <View style={styles.notificationContent}>
-                <Text style={styles.notificationText}>{notificacao.texto}</Text>
-                <Text style={styles.notificationSubtext}>{notificacao.subtexto}</Text>
+                <Text style={styles.notificationText}>{posto.name}</Text>
+                <Text style={styles.notificationSubtext}>{posto.address}</Text>
               </View>
-              <View style={[styles.notificationBadge, { backgroundColor: getLotacaoColor(notificacao.lotacao) }]}>
-                <Text style={styles.notificationBadgeText}>{getLotacaoText(notificacao.lotacao)}</Text>
+              <View style={[styles.notificationBadge, { backgroundColor: theme.colors.primary }]}> 
+                <Text style={styles.notificationBadgeText}>Ver</Text>
               </View>
             </TouchableOpacity>
           ))}
@@ -154,43 +164,10 @@ export default function MapScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Filtros</Text>
-            
             <View style={styles.filterItem}>
-              <Text style={styles.filterLabel}>Mostrar Postos Lotados</Text>
-              <Switch
-                value={filtros.lotado}
-                onValueChange={(value) => setFiltros(prev => ({ ...prev, lotado: value }))}
-                trackColor={{ false: theme.colors.lightGray, true: theme.colors.lotacao.lotado }}
-              />
+              <Text style={styles.filterLabel}>Distância (km):</Text>
+              <Text style={{ fontWeight: 'bold', color: theme.colors.primary }}>{filtros.distancia}</Text>
             </View>
-
-            <View style={styles.filterItem}>
-              <Text style={styles.filterLabel}>Mostrar Alta Lotação</Text>
-              <Switch
-                value={filtros.alta}
-                onValueChange={(value) => setFiltros(prev => ({ ...prev, alta: value }))}
-                trackColor={{ false: theme.colors.lightGray, true: theme.colors.lotacao.alta }}
-              />
-            </View>
-
-            <View style={styles.filterItem}>
-              <Text style={styles.filterLabel}>Mostrar Média Lotação</Text>
-              <Switch
-                value={filtros.media}
-                onValueChange={(value) => setFiltros(prev => ({ ...prev, media: value }))}
-                trackColor={{ false: theme.colors.lightGray, true: theme.colors.lotacao.media }}
-              />
-            </View>
-
-            <View style={styles.filterItem}>
-              <Text style={styles.filterLabel}>Mostrar Baixa Lotação</Text>
-              <Switch
-                value={filtros.baixa}
-                onValueChange={(value) => setFiltros(prev => ({ ...prev, baixa: value }))}
-                trackColor={{ false: theme.colors.lightGray, true: theme.colors.lotacao.baixa }}
-              />
-            </View>
-
             <TouchableOpacity 
               style={styles.modalButton}
               onPress={() => setModalFiltros(false)}

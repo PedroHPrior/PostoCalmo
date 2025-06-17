@@ -8,8 +8,7 @@
     "rootDir": "./src",
     "removeComments": true,
     "typeRoots": [
-      "./node_modules/@types",
-      "./src/@types"
+      "./node_modules/@types"
     ],
     "esModuleInterop": true,
     "resolveJsonModule": true,
@@ -18,7 +17,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
-    "strict": true
+    "strict": true,
+    "moduleResolution": "node",
+    "strictPropertyInitialization": false
   },
   "include": [
     "src/**/*"

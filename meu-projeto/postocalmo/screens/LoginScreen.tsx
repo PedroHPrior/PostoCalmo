@@ -1,12 +1,48 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, SafeAreaView, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, SafeAreaView, Image, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { theme } from '../constants/theme';
+import { API_URL } from '../constants/api';
+
+type MessageType = 'error' | 'success' | null;
 
 export default function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ text: string; type: MessageType }>({ text: '', type: null });
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setMessage({ text: 'Preencha todos os campos.', type: 'error' });
+      return;
+    }
+    setLoading(true);
+    setMessage({ text: '', type: null });
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setMessage({ text: data.message || 'Login realizado com sucesso!', type: 'success' });
+        setTimeout(() => {
+          navigation.navigate('Map');
+        }, 1500);
+      } else {
+        setMessage({ text: data.message || 'Email ou senha inválidos.', type: 'error' });
+      }
+    } catch (error) {
+      setMessage({ text: 'Não foi possível conectar ao servidor. Verifique sua conexão ou tente novamente.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,31 +64,57 @@ export default function LoginScreen() {
               placeholderTextColor={theme.colors.textLight}
               keyboardType="email-address"
               autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+              editable={!loading}
             />
             <TextInput 
               placeholder="Senha" 
               style={styles.input} 
               secureTextEntry 
               placeholderTextColor={theme.colors.textLight}
+              value={password}
+              onChangeText={setPassword}
+              editable={!loading}
             />
+
+            {message.text ? (
+              <View style={[
+                styles.messageContainer,
+                message.type === 'error' ? styles.errorContainer : styles.successContainer
+              ]}>
+                <Text style={[
+                  styles.messageText,
+                  message.type === 'error' ? styles.errorText : styles.successText
+                ]}>
+                  {message.text}
+                </Text>
+              </View>
+            ) : null}
 
             <TouchableOpacity 
               style={styles.forgotPassword}
               onPress={() => navigation.navigate('ForgotPassword')}
+              disabled={loading}
             >
               <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.loginButton}
-              onPress={() => navigation.navigate('Map')}
+              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
             >
-              <Text style={styles.loginButtonText}>Entrar</Text>
+              {loading ? (
+                <ActivityIndicator color={theme.colors.white} />
+              ) : (
+                <Text style={styles.loginButtonText}>Entrar</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>Não tem uma conta? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={loading}>
                 <Text style={styles.registerLink}>Registre-se</Text>
               </TouchableOpacity>
             </View>
@@ -116,6 +178,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.lightGray,
   },
+  messageContainer: {
+    padding: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.md,
+  },
+  errorContainer: {
+    backgroundColor: '#FFE5E5',
+  },
+  successContainer: {
+    backgroundColor: '#E5FFE5',
+  },
+  messageText: {
+    ...theme.typography.body,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: theme.colors.lotacao?.lotado || '#B00020',
+  },
+  successText: {
+    color: theme.colors.lotacao?.baixa || '#007E33',
+  },
   forgotPassword: {
     alignSelf: 'flex-end',
     marginBottom: theme.spacing.lg,
@@ -130,6 +213,9 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: theme.colors.white,

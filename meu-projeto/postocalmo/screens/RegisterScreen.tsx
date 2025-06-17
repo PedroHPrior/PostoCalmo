@@ -1,12 +1,55 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { theme } from '../constants/theme';
+import { API_URL } from '../constants/api';
+
+type MessageType = 'error' | 'success' | null;
 
 export default function RegisterScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ text: string; type: MessageType }>({ text: '', type: null });
+
+  const handleRegister = async () => {
+    if (!name || !email || !cpf || !password || !confirmPassword) {
+      setMessage({ text: 'Preencha todos os campos.', type: 'error' });
+      return;
+    }
+    if (password !== confirmPassword) {
+      setMessage({ text: 'As senhas não coincidem.', type: 'error' });
+      return;
+    }
+    setLoading(true);
+    setMessage({ text: '', type: null });
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, cpf, password })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setMessage({ text: data.message || 'Registro realizado com sucesso!', type: 'success' });
+        setTimeout(() => {
+          navigation.navigate('Login');
+        }, 1500);
+      } else {
+        setMessage({ text: data.message || 'Erro ao registrar.', type: 'error' });
+      }
+    } catch (error) {
+      setMessage({ text: 'Não foi possível conectar ao servidor. Verifique sua conexão ou tente novamente.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -27,6 +70,9 @@ export default function RegisterScreen() {
                 placeholder="Nome Completo" 
                 style={styles.input} 
                 placeholderTextColor={theme.colors.textLight}
+                value={name}
+                onChangeText={setName}
+                editable={!loading}
               />
               <TextInput 
                 placeholder="Email" 
@@ -34,36 +80,67 @@ export default function RegisterScreen() {
                 placeholderTextColor={theme.colors.textLight}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+                editable={!loading}
               />
               <TextInput 
-                placeholder="CPF / CNPJ" 
+                placeholder="CPF" 
                 style={styles.input} 
                 placeholderTextColor={theme.colors.textLight}
                 keyboardType="numeric"
+                value={cpf}
+                onChangeText={setCpf}
+                editable={!loading}
               />
               <TextInput 
                 placeholder="Senha" 
                 style={styles.input} 
                 secureTextEntry 
                 placeholderTextColor={theme.colors.textLight}
+                value={password}
+                onChangeText={setPassword}
+                editable={!loading}
               />
               <TextInput 
                 placeholder="Confirme a Senha" 
                 style={styles.input} 
                 secureTextEntry 
                 placeholderTextColor={theme.colors.textLight}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                editable={!loading}
               />
 
+              {message.text ? (
+                <View style={[
+                  styles.messageContainer,
+                  message.type === 'error' ? styles.errorContainer : styles.successContainer
+                ]}>
+                  <Text style={[
+                    styles.messageText,
+                    message.type === 'error' ? styles.errorText : styles.successText
+                  ]}>
+                    {message.text}
+                  </Text>
+                </View>
+              ) : null}
+
               <TouchableOpacity 
-                style={styles.registerButton}
-                onPress={() => navigation.navigate('Login')}
+                style={[styles.registerButton, loading && styles.registerButtonDisabled]}
+                onPress={handleRegister}
+                disabled={loading}
               >
-                <Text style={styles.registerButtonText}>Registrar</Text>
+                {loading ? (
+                  <ActivityIndicator color={theme.colors.white} />
+                ) : (
+                  <Text style={styles.registerButtonText}>Registrar</Text>
+                )}
               </TouchableOpacity>
 
               <View style={styles.loginContainer}>
                 <Text style={styles.loginText}>Já tem uma conta? </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={loading}>
                   <Text style={styles.loginLink}>Faça login</Text>
                 </TouchableOpacity>
               </View>
@@ -131,6 +208,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.lightGray,
   },
+  messageContainer: {
+    padding: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.md,
+  },
+  errorContainer: {
+    backgroundColor: '#FFE5E5',
+  },
+  successContainer: {
+    backgroundColor: '#E5FFE5',
+  },
+  messageText: {
+    ...theme.typography.body,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: theme.colors.lotacao?.lotado || '#B00020',
+  },
+  successText: {
+    color: theme.colors.lotacao?.baixa || '#007E33',
+  },
   registerButton: {
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
@@ -138,6 +236,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
+  },
+  registerButtonDisabled: {
+    opacity: 0.7,
   },
   registerButtonText: {
     color: theme.colors.white,

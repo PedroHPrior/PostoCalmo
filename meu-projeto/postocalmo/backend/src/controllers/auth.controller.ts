@@ -5,7 +5,7 @@ import { AppError } from '../utils/AppError';
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, cpf } = req.body;
 
     // Verificar se o usuário já existe
     const existingUser = await User.findOne({ email });
@@ -13,11 +13,18 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       throw new AppError('Email já cadastrado', 400);
     }
 
+    // Verificar se o CPF já existe
+    const existingCpf = await User.findOne({ cpf });
+    if (existingCpf) {
+      throw new AppError('CPF já cadastrado', 400);
+    }
+
     // Criar novo usuário
     const user = new User({
       name,
       email,
-      password
+      password,
+      cpf
     });
 
     await user.save();
@@ -30,11 +37,13 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     );
 
     res.status(201).json({
+      message: 'Usuário registrado com sucesso!',
       token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
+        cpf: user.cpf,
         role: user.role
       }
     });
@@ -67,11 +76,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     );
 
     res.json({
+      message: 'Login realizado com sucesso!',
       token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
+        cpf: user.cpf,
         role: user.role
       }
     });

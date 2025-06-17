@@ -13,13 +13,17 @@ export const createPosto = async (req: Request, res: Response, next: NextFunctio
 
 export const getPostos = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { lat, lng, radius = 5000, specialty, service } = req.query;
+    const { lat, lng, radius = 5000 } = req.query;
 
-    let query: any = {};
-    
-    // Filtro por localização
-    if (lat && lng) {
-      query.location = {
+    if (!lat || !lng) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Latitude e longitude são obrigatórios para buscar postos próximos.'
+      });
+    }
+
+    const query = {
+      location: {
         $near: {
           $geometry: {
             type: 'Point',
@@ -27,22 +31,17 @@ export const getPostos = async (req: Request, res: Response, next: NextFunction)
           },
           $maxDistance: Number(radius)
         }
-      };
-    }
+      }
+    };
 
-    // Filtro por especialidade
-    if (specialty) {
-      query.specialties = specialty;
-    }
+    // Busca ordenada por distância
+    const postos = await Posto.find(query).lean();
 
-    // Filtro por serviço disponível
-    if (service) {
-      query['services.type'] = service;
-      query['services.available'] = true;
-    }
-
-    const postos = await Posto.find(query);
-    res.json(postos);
+    res.json({
+      status: 'success',
+      results: postos.length,
+      postos
+    });
   } catch (error) {
     next(error);
   }
@@ -127,7 +126,8 @@ export const addReview = async (req: Request, res: Response, next: NextFunction)
     posto.reviews.push({
       user: req.user._id,
       rating,
-      comment
+      comment,
+      createdAt: new Date()
     });
 
     // Atualizar rating médio
