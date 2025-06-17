@@ -4,6 +4,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { theme } from '../constants/theme';
 import { API_URL } from '../constants/api';
+import Slider from '@react-native-community/slider';
 
 // Função auxiliar para determinar a cor baseada na lotação
 const getLotacaoColor = (lotacao: number) => {
@@ -75,8 +76,24 @@ export default function MapScreen() {
     }
   };
 
+  // Função para obter a lotação do posto (exemplo: média dos serviços)
+  const getPostoLotacao = (posto: any) => {
+    if (!posto.services || posto.services.length === 0) return 0;
+    // Supondo que cada serviço tem um campo waitingTime (quanto maior, mais lotado)
+    // Aqui você pode adaptar para o seu critério de lotação
+    const max = Math.max(...posto.services.map((s: any) => s.waitingTime || 0));
+    if (max > 60) return 100; // lotado
+    if (max >= 30) return 70; // alta
+    if (max >= 10) return 40; // média
+    return 10; // baixa
+  };
+
   const postosFiltrados = postos.filter(posto => {
-    // Aqui você pode filtrar por lotação se quiser, por enquanto retorna todos
+    const lotacao = getPostoLotacao(posto);
+    if (lotacao > 95 && !filtros.lotado) return false;
+    if (lotacao >= 65 && !filtros.alta) return false;
+    if (lotacao >= 30 && !filtros.media) return false;
+    if (lotacao < 30 && !filtros.baixa) return false;
     return true;
   });
 
@@ -166,7 +183,52 @@ export default function MapScreen() {
             <Text style={styles.modalTitle}>Filtros</Text>
             <View style={styles.filterItem}>
               <Text style={styles.filterLabel}>Distância (km):</Text>
-              <Text style={{ fontWeight: 'bold', color: theme.colors.primary }}>{filtros.distancia}</Text>
+              <View style={styles.sliderContainer}>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={1}
+                  maximumValue={20}
+                  step={1}
+                  value={filtros.distancia}
+                  onValueChange={value => setFiltros(prev => ({ ...prev, distancia: value }))}
+                  minimumTrackTintColor={theme.colors.primary}
+                  maximumTrackTintColor={theme.colors.lightGray}
+                  thumbTintColor={theme.colors.primary}
+                />
+                <Text style={styles.sliderValue}>{Math.round(filtros.distancia)} km</Text>
+              </View>
+            </View>
+            <View style={styles.filterItem}>
+              <Text style={styles.filterLabel}>Mostrar Postos Lotados</Text>
+              <Switch
+                value={filtros.lotado}
+                onValueChange={value => setFiltros(prev => ({ ...prev, lotado: value }))}
+                trackColor={{ false: theme.colors.lightGray, true: theme.colors.lotacao.lotado }}
+              />
+            </View>
+            <View style={styles.filterItem}>
+              <Text style={styles.filterLabel}>Mostrar Alta Lotação</Text>
+              <Switch
+                value={filtros.alta}
+                onValueChange={value => setFiltros(prev => ({ ...prev, alta: value }))}
+                trackColor={{ false: theme.colors.lightGray, true: theme.colors.lotacao.alta }}
+              />
+            </View>
+            <View style={styles.filterItem}>
+              <Text style={styles.filterLabel}>Mostrar Média Lotação</Text>
+              <Switch
+                value={filtros.media}
+                onValueChange={value => setFiltros(prev => ({ ...prev, media: value }))}
+                trackColor={{ false: theme.colors.lightGray, true: theme.colors.lotacao.media }}
+              />
+            </View>
+            <View style={styles.filterItem}>
+              <Text style={styles.filterLabel}>Mostrar Baixa Lotação</Text>
+              <Switch
+                value={filtros.baixa}
+                onValueChange={value => setFiltros(prev => ({ ...prev, baixa: value }))}
+                trackColor={{ false: theme.colors.lightGray, true: theme.colors.lotacao.baixa }}
+              />
             </View>
             <TouchableOpacity 
               style={styles.modalButton}
@@ -313,14 +375,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   filterItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
     marginBottom: theme.spacing.md,
   },
   filterLabel: {
     ...theme.typography.body,
     color: theme.colors.primary,
+    marginBottom: theme.spacing.sm,
+  },
+  sliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  slider: {
+    flex: 1,
+    height: 40,
+  },
+  sliderValue: {
+    width: 60,
+    textAlign: 'right',
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    marginLeft: theme.spacing.sm,
   },
   modalButton: {
     backgroundColor: theme.colors.primary,

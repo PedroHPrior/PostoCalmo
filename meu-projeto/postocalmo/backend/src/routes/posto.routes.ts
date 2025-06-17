@@ -11,6 +11,9 @@ import { protect, restrictTo } from '../middlewares/auth.middleware';
 
 const router = Router();
 
+// Endpoint temporário para cadastro de postos sem autenticação
+router.post('/public', createPosto);
+
 // Rotas públicas
 router.get('/', getPostos);
 router.get('/:id', getPosto);
