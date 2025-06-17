@@ -63,13 +63,13 @@ npm install
 1. Clone o repositório do backend:
 ```bash
 git clone https://github.com/seu-usuario/postocalmo-backend.git
-cd postocalmo-backend
+cd backend
 npm install
 ```
 
 2. Inicie o servidor backend:
 ```bash
-npm start
+npm run dev
 ```
 
 3. Configure a URL da API:
