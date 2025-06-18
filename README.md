@@ -8,21 +8,22 @@ O **PostoCalmo** é uma aplicação voltada à visualização e escolha intelige
 
 * [React Native](https://reactnative.dev/)
 * [Expo](https://expo.dev/)
-* [TypeScript](https://www.typescriptlang.org/) *(em breve)*
+* [TypeScript](https://www.typescriptlang.org/)
 * [React Navigation](https://reactnavigation.org/)
 * [React Native Maps](https://github.com/react-native-maps/react-native-maps)
+* [Expo Location](https://docs.expo.dev/versions/latest/sdk/location/)
 
 ---
 
 ## 📁 Estrutura de Pastas
 
 ```bash
-📦meu-projeto
+📦postocalmo
  ┣ 📂assets          # Imagens, ícones e outros recursos estáticos
- ┣ 📂components      # Componentes reutilizáveis (em breve)
- ┣ 📂constants       # Constantes globais e estilos compartilhados (em breve)
+ ┣ 📂components      # Componentes reutilizáveis
+ ┣ 📂constants       # Constantes globais e estilos compartilhados
  ┣ 📂screens         # Telas principais (Login, Registro, Mapa)
- ┣ 📂services        # Integrações com APIs externas (em breve)
+ ┣ 📂services        # Integrações com APIs externas
  ┣ 📜App.tsx         # Arquivo principal da aplicação
  ┣ 📜package.json    # Gerenciador de dependências e scripts
 ```
@@ -36,6 +37,7 @@ O **PostoCalmo** é uma aplicação voltada à visualização e escolha intelige
 * Node.js (v18+)
 * NPM ou Yarn
 * Expo CLI
+* Backend do PostoCalmo rodando localmente
 
 ### 1. Instalação do Expo CLI (caso não tenha)
 
@@ -56,30 +58,86 @@ cd postocalmo
 npm install
 ```
 
-### 4. Execute o Projeto
+### 4. Configure o Backend
+
+1. Clone o repositório do backend:
+```bash
+git clone https://github.com/seu-usuario/postocalmo-backend.git
+cd backend
+npm install
+```
+
+2. Inicie o servidor backend:
+```bash
+npm run dev
+```
+
+3. Configure a URL da API:
+   - Abra o arquivo `postocalmo/constants/api.ts`
+   - Ajuste a `API_URL` de acordo com seu ambiente:
+     ```typescript
+     // Para emulador Android
+     export const API_URL = "http://10.0.2.2:3000/api";
+     
+     // Para iOS ou Web
+     export const API_URL = "http://localhost:3000/api";
+     
+     // Para dispositivo físico
+     export const API_URL = "http://SEU_IP_LOCAL:3000/api";
+     ```
+
+### 5. Execute o Projeto
 
 ```bash
 npm start
 ```
 
-> A partir daqui, você pode escanear o QR Code com o aplicativo **Expo Go** (iOS/Android) ou rodar direto no navegador (`w` para Web).
+> A partir daqui, você pode:
+> - Escanear o QR Code com o aplicativo **Expo Go** (iOS/Android)
+> - Pressionar `w` para rodar no navegador
+> - Pressionar `a` para rodar no emulador Android
+> - Pressionar `i` para rodar no simulador iOS
 
 ---
 
 ## 📷 Telas Disponíveis
 
-* **Login** – Acesso à plataforma.
-* **Registro** – Cadastro de novos usuários.
-* **Mapa** – Visualização dos postos disponíveis com alertas de prioridade.
+* **Login** – Acesso à plataforma com autenticação JWT
+* **Registro** – Cadastro de novos usuários
+* **Mapa** – Visualização dos postos disponíveis com:
+  - Filtros por distância
+  - Indicadores de lotação
+  - Geolocalização em tempo real
 
 ---
 
-## 🧪 Próximas Etapas
+## 🔧 Configuração do Ambiente
 
-* Integração com backend (Node.js ou Firebase)
-* Autenticação com JWT
-* Filtros por especialidade, horário e ocupação
-* Geolocalização em tempo real
+### Variáveis de Ambiente
+
+Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
+
+```env
+API_URL=http://localhost:3000/api
+```
+
+### Permissões Necessárias
+
+O aplicativo requer as seguintes permissões:
+- Localização
+- Acesso à internet
+- Acesso ao mapa
+
+---
+
+## 🧪 Funcionalidades Implementadas
+
+* ✅ Autenticação de usuários
+* ✅ Visualização de postos no mapa
+* ✅ Filtros por distância
+* ✅ Indicadores de lotação
+* ✅ Geolocalização
+* ✅ Interface responsiva
 
 ---
 
@@ -93,7 +151,17 @@ Para mais informações institucionais ou parcerias, entre em contato com nosso 
 
 ## 🤝 Contribuindo
 
-Fique à vontade para abrir issues ou enviar pull requests com sugestões de melhorias. Toda colaboração é bem-vinda!
+1. Faça um Fork do projeto
+2. Crie uma Branch para sua Feature (`git checkout -b feature/AmazingFeature`)
+3. Faça o Commit das suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Faça o Push para a Branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+---
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ---
 
